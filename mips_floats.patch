@@ -1,0 +1,98 @@
+diff --git a/gcc/config/mips/mips.cc b/gcc/config/mips/mips.cc
+index 0ac0248fb9e..aaca191133b 100644
+--- a/gcc/config/mips/mips.cc
++++ b/gcc/config/mips/mips.cc
+@@ -2414,6 +2414,10 @@ mips_cannot_force_const_mem (machine_mode mode, rtx x)
+       && mips_legitimate_constant_p (mode, x))
+     return true;
+ 
++  /* Expand 32-bit floating-point constants inline.  */
++  if (CONST_DOUBLE_AS_FLOAT_P(x) && mips_legitimate_constant_p (mode, x))
++    return true;
++
+   split_const (x, &base, &offset);
+   if (mips_symbolic_constant_p (base, SYMBOL_CONTEXT_LEA, &type))
+     {
+@@ -2851,6 +2855,7 @@ mips_const_insns (rtx x)
+   struct mips_integer_op codes[MIPS_MAX_INTEGER_OPS];
+   enum mips_symbol_type symbol_type;
+   rtx offset;
++  long v;
+ 
+   switch (GET_CODE (x))
+     {
+@@ -2884,8 +2889,23 @@ mips_const_insns (rtx x)
+ 	return 1;
+       /* Fall through.  */
+     case CONST_DOUBLE:
+-      /* Allow zeros for normal mode, where we can use $0.  */
+-      return !TARGET_MIPS16 && x == CONST0_RTX (GET_MODE (x)) ? 1 : 0;
++      if (TARGET_MIPS16)
++	return 0;
++
++      /* Use $0 for zeros.  */
++      if (x == CONST0_RTX(GET_MODE (x)))
++	return 1;
++
++      /* Load doubles from memory.  */
++      if (GET_MODE (x) != SFmode)
++	return 0;
++
++      /* Obtain the floating-point encoding for this constant.  */
++      REAL_VALUE_TO_TARGET_SINGLE (*CONST_DOUBLE_REAL_VALUE (x), v);
++
++      /* Determine how many instructions it takes to load the encoding as a
++	 constant, plus one for the coprocessor move.  */
++      return mips_build_integer(codes, v) + 1;
+ 
+     case CONST:
+       if (CONST_GP_P (x))
+diff --git a/gcc/config/mips/mips.md b/gcc/config/mips/mips.md
+index e0f0a582732..051ddfd2bab 100644
+--- a/gcc/config/mips/mips.md
++++ b/gcc/config/mips/mips.md
+@@ -5112,6 +5112,23 @@
+ 	(match_operand:SF 1 ""))]
+   ""
+ {
++  if (GET_CODE (operands[1]) == CONST_DOUBLE
++      && !reload_in_progress
++      && GET_MODE (operands[1]) == SFmode
++      && operands[1] != CONST0_RTX (SFmode))
++    {
++      /* Moving a const float into a floating-point register. Load the integer
++	 encoding as a constant in a general register and emit a move from the
++	 general register to the floating-point register.  */
++      long v;
++      REAL_VALUE_TO_TARGET_SINGLE (*CONST_DOUBLE_REAL_VALUE (operands[1]), v);
++
++      operands[1] = force_reg (SImode, GEN_INT (v));
++      operands[1] = gen_rtx_SUBREG (SFmode, operands[1], 0);
++      emit_move_insn (operands[0], operands[1]);
++      DONE;
++    }
++
+   if (mips_legitimize_move (SFmode, operands[0], operands[1]))
+     DONE;
+ })
+@@ -7712,6 +7729,20 @@
+   [(set_attr "move_type" "load,fpload,store,fpstore")
+    (set_attr "insn_count" "2,2,2,2")])
+ 
++;; Consecutive useless moves to a floating-point register and back occasionally
++;; generated in the reload pass. Collapse these into a single move between
++;; general registers if the floating-point intermediate register is dead
++;; following this sequence.
++(define_peephole2
++  [(set	(match_operand:SF 0 "register_operand")
++	(match_operand:SF 1 "register_operand"))
++   (set	(match_operand:SF 2 "register_operand")
++	(match_dup 0))]
++  "peep2_reg_dead_p (2, operands[0])"
++  [(set	(match_dup 2)
++	(match_dup 1))]
++)
++
+ ;; 2 HI/SI/SF/DF loads are joined.
+ ;; P5600 does not support bonding of two LBs, hence QI mode is not included.
+ ;; The loads must be non-volatile as they might be reordered at the time of asm

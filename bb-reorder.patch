@@ -1,0 +1,61 @@
+diff --git a/gcc/bb-reorder.cc b/gcc/bb-reorder.cc
+index 615d5426a34..fb686c05118 100644
+--- a/gcc/bb-reorder.cc
++++ b/gcc/bb-reorder.cc
+@@ -453,7 +453,7 @@ find_traces_1_round (int branch_th, profile_count count_th,
+   /* Heap for discarded basic blocks which are possible starting points for
+      the next round.  */
+   bb_heap_t *new_heap = new bb_heap_t (LONG_MIN);
+-  bool for_size = optimize_function_for_size_p (cfun);
++  const bool for_size = false;
+ 
+   while (!(*heap)->empty ())
+     {
+@@ -890,10 +890,6 @@ bb_to_key (basic_block bb)
+   edge e;
+   edge_iterator ei;
+ 
+-  /* Use index as key to align with its original order.  */
+-  if (optimize_function_for_size_p (cfun))
+-    return bb->index;
+-
+   /* Do not start in probably never executed blocks.  */
+ 
+   if (BB_PARTITION (bb) == BB_COLD_PARTITION
+@@ -946,11 +942,6 @@ better_edge_p (const_basic_block bb, const_edge e, profile_probability prob,
+      maximum values.  */
+   profile_probability diff_prob = best_prob / 10;
+ 
+-  /* The smaller one is better to keep the original order.  */
+-  if (optimize_function_for_size_p (cfun))
+-    return !cur_best_edge
+-	   || cur_best_edge->dest->index > e->dest->index;
+-
+   /* Those edges are so expensive that continuing a trace is not useful
+      performance wise.  */
+   if (e->flags & (EDGE_ABNORMAL | EDGE_EH))
+@@ -1009,15 +1000,6 @@ connect_better_edge_p (const_edge e, bool src_index_p, int best_len,
+   if (!cur_best_edge)
+     return true;
+ 
+-  if (optimize_function_for_size_p (cfun))
+-    {
+-      e_index = src_index_p ? e->src->index : e->dest->index;
+-      b_index = src_index_p ? cur_best_edge->src->index
+-			      : cur_best_edge->dest->index;
+-      /* The smaller one is better to keep the original order.  */
+-      return b_index > e_index;
+-    }
+-
+   if (src_index_p)
+     {
+       e_index = e->src->index;
+@@ -1078,7 +1060,7 @@ connect_traces (int n_traces, struct trace *traces)
+   int current_pass;
+   int current_partition;
+   profile_count count_threshold;
+-  bool for_size = optimize_function_for_size_p (cfun);
++  const bool for_size = false;
+ 
+   count_threshold = max_entry_count.apply_scale (DUPLICATION_THRESHOLD, 1000);
+ 
