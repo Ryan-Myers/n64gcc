@@ -107,7 +107,6 @@ test -d "newlib-$NEWLIB_V"     || tar -xzf "newlib-$NEWLIB_V.tar.gz"
 # Compile binutils
 cd "binutils-$BINUTILS_V"
 CFLAGS="-O2 -std=gnu99 ${MACOS_CFLAGS}" CXXFLAGS="-O2 ${MACOS_CXXFLAGS}" ./configure \
-CFLAGS="-O2 -std=gnu99" CXXFLAGS="-O2" ./configure \
 	--disable-debug \
     --enable-checking=release \
     --prefix="$INSTALL_PATH" \
