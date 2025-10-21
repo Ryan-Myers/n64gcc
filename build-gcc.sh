@@ -87,6 +87,13 @@ test -d "gcc-$GCC_V"           || { \
                                   }
 test -d "newlib-$NEWLIB_V"     || tar -xzf "newlib-$NEWLIB_V.tar.gz"
 
+# MacOS has it's own z-lib that is not compatible with the build, so we need to set flags to use the SDK version``
+if [[ "$OSTYPE" == darwin* ]]; then
+  SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
+  export CPPFLAGS="-isysroot $SDKROOT $CPPFLAGS"
+  export LDFLAGS="-isysroot $SDKROOT $LDFLAGS"
+fi
+
 # Compile binutils
 cd "binutils-$BINUTILS_V"
 CFLAGS="-O2 -std=gnu99" CXXFLAGS="-O2" ./configure \
