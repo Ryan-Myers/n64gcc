@@ -65,12 +65,14 @@ jobs:
         shell: bash
         if: matrix.os.name == 'macos'
         run: |
-          brew install make
+          brew install make gcc
 
       - name: Build gcc binary (MacOS)
         shell: bash
         if: matrix.os.name == 'macos'
         run: |
+          export CC=gcc-15
+          export CXX=g++-15
           ./build-gcc.sh
 
       # # Windows
