@@ -42,15 +42,8 @@ NEWLIB_V=4.1.0
 ZLIB_FLAG=""
 
 # MacOS has it's own z-lib that is not compatible with the build, so we need to set flags to use the SDK version
-# Also need to work around macro conflicts between GCC's safe-ctype.h and macOS system headers
 if [[ "$OSTYPE" == darwin* ]]; then
     ZLIB_FLAG="--with-system-zlib"
-    # Prevent macro conflicts between GCC internal headers (safe-ctype.h) and macOS libc++ headers
-    MACOS_CFLAGS="-D_FORTIFY_SOURCE=0"
-    MACOS_CXXFLAGS="-D_FORTIFY_SOURCE=0 -D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0"
-else
-    MACOS_CFLAGS=""
-    MACOS_CXXFLAGS=""
 fi
 
 # Check if a command-line tool is available: status 0 means "yes"; status 1 means "no"
@@ -95,6 +88,9 @@ test -d "gcc-$GCC_V"           || { \
                                       patch -p1 < "../bb-reorder.patch"; \
                                       patch -p1 < "../mips_floats.patch"; \
                                       patch -p1 < "../mingw.patch"; \
+                                      if [[ "$OSTYPE" == darwin* ]]; then \
+                                          patch -p0 < "../gcc-system-h-macos.patch"; \
+                                      fi; \
                                       contrib/download_prerequisites; \
                                       popd; \
                                   }
@@ -102,7 +98,7 @@ test -d "newlib-$NEWLIB_V"     || tar -xzf "newlib-$NEWLIB_V.tar.gz"
 
 # Compile binutils
 cd "binutils-$BINUTILS_V"
-CFLAGS="-O2 -std=gnu99 ${MACOS_CFLAGS}" CXXFLAGS="-O2 ${MACOS_CXXFLAGS}" ./configure \
+CFLAGS="-O2 -std=gnu99" CXXFLAGS="-O2" ./configure \
 	--disable-debug \
     --enable-checking=release \
     --prefix="$INSTALL_PATH" \
@@ -127,7 +123,7 @@ cd ..
 rm -rf gcc_compile
 mkdir -p gcc_compile
 cd gcc_compile
-CFLAGS="-O2 ${MACOS_CFLAGS}" CXXFLAGS="-O2 ${MACOS_CXXFLAGS}" \
+CFLAGS="-O2" CXXFLAGS="-O2" \
 ../"gcc-$GCC_V"/configure \
     --prefix="$INSTALL_PATH" \
     --with-gnu-as=${INSTALL_PATH}/bin/mips-n64-as \
