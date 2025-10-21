@@ -39,6 +39,12 @@ JOBS="${JOBS:-1}" # If getconf returned nothing, default to 1
 BINUTILS_V=2.30
 GCC_V=12.2.0
 NEWLIB_V=4.1.0
+ZLIB_FLAG=""
+
+# MacOS has it's own z-lib that is not compatible with the build, so we need to set flags to use the SDK version``
+if [[ "$OSTYPE" == darwin* ]]; then
+    ZLIB_FLAG="--with-system-zlib"
+fi
 
 # Check if a command-line tool is available: status 0 means "yes"; status 1 means "no"
 command_exists () {
@@ -87,13 +93,6 @@ test -d "gcc-$GCC_V"           || { \
                                   }
 test -d "newlib-$NEWLIB_V"     || tar -xzf "newlib-$NEWLIB_V.tar.gz"
 
-# MacOS has it's own z-lib that is not compatible with the build, so we need to set flags to use the SDK version``
-if [[ "$OSTYPE" == darwin* ]]; then
-  SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
-  export CPPFLAGS="-isysroot $SDKROOT $CPPFLAGS"
-  export LDFLAGS="-isysroot $SDKROOT $LDFLAGS"
-fi
-
 # Compile binutils
 cd "binutils-$BINUTILS_V"
 CFLAGS="-O2 -std=gnu99" CXXFLAGS="-O2" ./configure \
@@ -103,7 +102,8 @@ CFLAGS="-O2 -std=gnu99" CXXFLAGS="-O2" ./configure \
     --target=${MIPS}-elf \
     --with-cpu=mips64vr4300 \
     --program-prefix=mips-n64- \
-    --disable-werror
+    --disable-werror \
+    $ZLIB_FLAG
 make -j "$JOBS"
 make install
 
@@ -142,7 +142,8 @@ CFLAGS="-O2" CXXFLAGS="-O2" \
     --with-abi=${ABI} \
     $FP_FLAGS \
     --with-system-zlib \
-    --with-specs="${ABI_FLAGS} ${TARGET_FLAGS}"
+    --with-specs="${ABI_FLAGS} ${TARGET_FLAGS}" \
+    $ZLIB_FLAG
 make clean -j "$JOBS"
 make all-gcc -j "$JOBS"
 make install-gcc
