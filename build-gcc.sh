@@ -89,7 +89,7 @@ test -d "newlib-$NEWLIB_V"     || tar -xzf "newlib-$NEWLIB_V.tar.gz"
 
 # Compile binutils
 cd "binutils-$BINUTILS_V"
-CFLAGS="-O2" CXXFLAGS="-O2" ./configure \
+CFLAGS="-O2 -std=gnu99" CXXFLAGS="-O2" ./configure \
 	--disable-debug \
     --enable-checking=release \
     --prefix="$INSTALL_PATH" \
@@ -151,6 +151,12 @@ cd ../"newlib-$NEWLIB_V"
     --disable-shared \
     --disable-libssp \
     --disable-werror
+
+# Workaround here. GCC itself has an internal compiler error (ICE) when compiling one of the files,
+# so we need to compile it with -O0 to avoid the issue. We need to build until it fails, then build that file separately.
+
+make -j "$JOBS" || true # Hacky workaround for build issues, this will let the script continue
+make -C "./${MIPS}-elf/newlib/libm/math" lib_a-kf_rem_pio2.o CFLAGS+=" -O0"
 make -j "$JOBS"
 make install
 
