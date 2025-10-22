@@ -40,19 +40,6 @@ BINUTILS_V=2.30
 GCC_V=12.2.0
 NEWLIB_V=4.1.0
 
-# MacOS has it's own z-lib that is not compatible with the build, so we need to set flags to use the SDK version
-if [[ "$OSTYPE" == darwin* ]]; then
-    ZLIB_FLAG="--with-system-zlib"
-    MACOS_CFLAGS=""
-    MACOS_CXXFLAGS=""
-    MACOS_DISABLE_FLAGS=""
-else
-    ZLIB_FLAG=""
-    MACOS_CFLAGS=""
-    MACOS_CXXFLAGS=""
-    MACOS_DISABLE_FLAGS=""
-fi
-
 # Check if a command-line tool is available: status 0 means "yes"; status 1 means "no"
 command_exists () {
   (command -v "$1" >/dev/null 2>&1)
@@ -102,7 +89,7 @@ test -d "newlib-$NEWLIB_V"     || tar -xzf "newlib-$NEWLIB_V.tar.gz"
 
 # Compile binutils
 cd "binutils-$BINUTILS_V"
-CFLAGS="-O2 -std=gnu99 ${MACOS_CFLAGS}" CXXFLAGS="-O2 ${MACOS_CXXFLAGS}" ./configure \
+CFLAGS="-O2 -std=gnu99" CXXFLAGS="-O2" ./configure \
 	--disable-debug \
     --enable-checking=release \
     --prefix="$INSTALL_PATH" \
@@ -110,7 +97,7 @@ CFLAGS="-O2 -std=gnu99 ${MACOS_CFLAGS}" CXXFLAGS="-O2 ${MACOS_CXXFLAGS}" ./confi
     --with-cpu=mips64vr4300 \
     --program-prefix=mips-n64- \
     --disable-werror \
-    $ZLIB_FLAG
+    --with-system-zlib
 make -j "$JOBS"
 make install
 
@@ -127,7 +114,7 @@ cd ..
 rm -rf gcc_compile
 mkdir -p gcc_compile
 cd gcc_compile
-CFLAGS="-O2 ${MACOS_CFLAGS}" CXXFLAGS="-O2 ${MACOS_CXXFLAGS}" \
+CFLAGS="-O2" CXXFLAGS="-O2" \
 ../"gcc-$GCC_V"/configure \
     --prefix="$INSTALL_PATH" \
     --with-gnu-as=${INSTALL_PATH}/bin/mips-n64-as \
@@ -149,9 +136,7 @@ CFLAGS="-O2 ${MACOS_CFLAGS}" CXXFLAGS="-O2 ${MACOS_CXXFLAGS}" \
     --with-abi=${ABI} \
     $FP_FLAGS \
     --with-system-zlib \
-    --with-specs="${ABI_FLAGS} ${TARGET_FLAGS}" \
-    ${MACOS_DISABLE_FLAGS} \
-    $ZLIB_FLAG
+    --with-specs="${ABI_FLAGS} ${TARGET_FLAGS}"
 make clean -j "$JOBS"
 make all-gcc -j "$JOBS"
 make install-gcc

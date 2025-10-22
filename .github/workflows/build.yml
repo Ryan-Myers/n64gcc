@@ -62,17 +62,30 @@ jobs:
 
       # MacOS
       - name: Install dependencies (MacOS)
-        shell: bash
         if: matrix.os.name == 'macos'
+        shell: bash
         run: |
-          brew install make gcc
+          brew update
+          brew install make gcc@15 gnu-sed bison
+          # Ensure all later steps see GNU sed and Homebrew bison first
+          echo "$(brew --prefix gnu-sed)/libexec/gnubin" >> "$GITHUB_PATH"
+          echo "$(brew --prefix bison)/bin" >> "$GITHUB_PATH"
+
+      - name: Sanity check sed (macOS)
+        if: matrix.os.name == 'macos'
+        shell: bash
+        run: |
+          which sed
+          sed --version | head -n 1   # should print: "sed (GNU sed) ..."
 
       - name: Build gcc binary (MacOS)
-        shell: bash
         if: matrix.os.name == 'macos'
+        shell: bash
+        env:
+          CC: gcc-15
+          CXX: g++-15
+          SED: sed
         run: |
-          export CC=gcc-15
-          export CXX=g++-15
           ./build-gcc.sh
 
       # # Windows
