@@ -43,10 +43,9 @@ NEWLIB_V=4.1.0
 # MacOS has it's own z-lib that is not compatible with the build, so we need to set flags to use the SDK version
 if [[ "$OSTYPE" == darwin* ]]; then
     ZLIB_FLAG="--with-system-zlib"
-    # Prevent macro conflicts between GCC internal headers (safe-ctype.h) and macOS libc++ headers
-    MACOS_CFLAGS="-D_FORTIFY_SOURCE=0"
-    MACOS_CXXFLAGS="-D_FORTIFY_SOURCE=0 -D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0"
-    MACOS_DISABLE_FLAGS="--disable-decimal-float --disable-fixed-point"
+    MACOS_CFLAGS=""
+    MACOS_CXXFLAGS=""
+    MACOS_DISABLE_FLAGS=""
 else
     ZLIB_FLAG=""
     MACOS_CFLAGS=""
@@ -96,9 +95,6 @@ test -d "gcc-$GCC_V"           || { \
                                       patch -p1 < "../bb-reorder.patch"; \
                                       patch -p1 < "../mips_floats.patch"; \
                                       patch -p1 < "../mingw.patch"; \
-                                      if [[ "$OSTYPE" == darwin* ]]; then \
-                                          patch -p0 < "../gcc-system-h-macos.patch"; \
-                                      fi; \
                                       contrib/download_prerequisites; \
                                       popd; \
                                   }
