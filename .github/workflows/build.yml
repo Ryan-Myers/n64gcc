@@ -117,6 +117,7 @@ jobs:
         run: |
           cd mips-n64-toolchain
           tar -czvf mips-n64-toolchain-${{ matrix.os.name }}.tar.gz *
+          mv mips-n64-toolchain-${{ matrix.os.name }}.tar.gz ../
 
       - name: Upload archive
         uses: actions/upload-artifact@v4
